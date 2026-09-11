@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor Volume Penjualan - September 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --green: #22c55e;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --purple: #a78bfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 1.5rem;
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+  .grid {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+  }
+  .kpi .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi .value { font-size: 1.7rem; font-weight: 700; margin-top: 0.25rem; }
+  .kpi .sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; }
+  .accent { color: var(--accent); }
+  .green { color: var(--green); }
+  .orange { color: var(--orange); }
+  .purple { color: var(--purple); }
+  .charts {
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (max-width: 900px) {
+    .charts { grid-template-columns: 1fr; }
+  }
+  .chart-wrap { position: relative; height: 280px; }
+  .section-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+  select, input[type="search"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+  input[type="search"] { min-width: 220px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  th, td {
+    padding: 0.55rem 0.7rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: #0f172a;
+    color: var(--muted);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  th:hover { color: var(--accent); }
+  tr:hover td { background: rgba(56, 189, 248, 0.06); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: #334155;
+    color: var(--muted);
+  }
+  .badge.kg { background: #14532d; color: #86efac; }
+  .badge.bal { background: #1e3a5f; color: #93c5fd; }
+  .badge.karton { background: #4c1d95; color: #c4b5fd; }
+  .table-wrap {
+    max-height: 480px;
+    overflow: auto;
+    border-radius: 8px;
+  }
+  .bar-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .bar {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--accent);
+    min-width: 2px;
+  }
+  .tabs {
+    display: flex;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .tab {
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .tab.active {
+    background: var(--accent);
+    color: #0f172a;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .hidden { display: none !important; }
+  footer {
+    margin-top: 2rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+  <h1>📊 Monitor Volume Penjualan</h1>
+  <p class="subtitle">September 2026 · Data dari S1 – S5 · Update otomatis dari file Excel</p>
+
+  <div class="grid kpi-grid" id="kpi"></div>
+
+  <div class="grid charts">
+    <div class="card">
+      <div class="section-title">📈 Volume Harian (Total Semua Titik)</div>
+      <div class="chart-wrap"><canvas id="chartDaily"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="section-title">🏪 Perbandingan Titik Penjualan</div>
+      <div class="chart-wrap"><canvas id="chartSales"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:1.5rem">
+    <div class="section-title">🏆 Top Item berdasarkan Volume</div>
+    <div class="chart-wrap" style="height:320px"><canvas id="chartTop"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">📋 Detail Volume per Item</div>
+    <div class="controls">
+      <input type="search" id="search" placeholder="Cari item...">
+      <select id="filterUnit">
+        <option value="">Semua satuan</option>
+        <option value="KG">KG</option>
+        <option value="BAL">BAL</option>
+        <option value="KARTON">KARTON</option>
+      </select>
+      <select id="filterSales">
+        <option value="ALL">Semua titik (Total)</option>
+        <option value="S1">S1</option>
+        <option value="S2">S2</option>
+        <option value="S3">S3</option>
+        <option value="S4">S4</option>
+        <option value="S5">S5</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table id="table">
+        <thead>
+          <tr>
+            <th data-sort="name">Nama Item</th>
+            <th data-sort="weight">Satuan</th>
+            <th data-sort="S1" class="num">S1</th>
+            <th data-sort="S2" class="num">S2</th>
+            <th data-sort="S3" class="num">S3</th>
+            <th data-sort="S4" class="num">S4</th>
+            <th data-sort="S5" class="num">S5</th>
+            <th data-sort="total" class="num">TOTAL</th>
+            <th>Share</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem">
+    <div class="section-title">📅 Tren Harian per Item</div>
+    <div class="controls">
+      <select id="itemSelect"></select>
+    </div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chartItemDaily"></canvas></div>
+  </div>
+
+  <footer>
+    Dashboard Monitoring Volume · Dibuat otomatis dari file Sales Volume September 2026.xlsx
+  </footer>
+
+<script>
+const DATA = {"items": ["Bawang Putih", "Bihun Cap Tanam Jagung", "Bihun Superior", "Bihun Cap Putri Salju", "Emping", "Gula Merah Batok", "Kacang Dadap", "Kacang Hijau Australia", "Kacang Hijau Birma", "Kacang Hijau Kupas", "Kacang Tanah", "Kacang Tanah Kupas", "Kedelai", "Kemiri Bulat", "Kemiri Pecah", "Kerupuk Bawang Bintang", "Kerupuk Bawang Kuning", "Kerupuk Bawang Merah", "Kerupuk Bawang Pelangi", "Kerupuk Mawar Putih", "Ketumbar", "Lada Putih", "Mie Bakso", "Pop Corn", "Tepung Beras", "Tepung Ketan", "Tepung Roti", "Wijen"], "combined": {"Bawang Putih": {"weight": "BAL", "by_sales": {"S1": 1, "S2": 0, "S3": 0, "S4": 0, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 1, "8": 0, "9": 0, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 1}, "Bihun Cap Tanam Jagung": {"weight": "BAL", "by_sales": {"S1": 0, "S2": 0, "S3": 0, "S4": 5, "S5": 0}, "daily": {"1": 1, "2": 0, "3": 0, "4": 3, "5": 0, "6": 0, "7": 1, "8": 0, "9": 0, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 5}, "Bihun Superior": {"weight": "BAL", "by_sales": {"S1": 0, "S2": 0, "S3": 0, "S4": 0, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 0}, "Bihun Cap Putri Salju": {"weight": "BAL", "by_sales": {"S1": 0, "S2": 0, "S3": 52, "S4": 0, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 5, "6": 0, "7": 45, "8": 0, "9": 0, "10": 2, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 52}, "Emping": {"weight": "KARTON", "by_sales": {"S1": 1, "S2": 1, "S3": 2, "S4": 2, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 1, "4": 1, "5": 1, "6": 0, "7": 1, "8": 2, "9": 0, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 6}, "Gula Merah Batok": {"weight": "BAL", "by_sales": {"S1": 4, "S2": 17, "S3": 7, "S4": 9, "S5": 1}, "daily": {"1": 2, "2": 1, "3": 14, "4": 3, "5": 2, "6": 0, "7": 7, "8": 1, "9": 3, "10": 4, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 38}, "Kacang Dadap": {"weight": "KG", "by_sales": {"S1": 0, "S2": 5, "S3": 0, "S4": 1, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 1, "8": 5, "9": 0, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 6}, "Kacang Hijau Australia": {"weight": "KG", "by_sales": {"S1": 0, "S2": 54, "S3": 37, "S4": 0, "S5": 0}, "daily": {"1": 25, "2": 0, "3": 2, "4": 25, "5": 7, "6": 0, "7": 0, "8": 5, "9": 25, "10": 2, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 91}, "Kacang Hijau Birma": {"weight": "KG", "by_sales": {"S1": 42, "S2": 177, "S3": 81, "S4": 56, "S5": 0}, "daily": {"1": 133, "2": 5, "3": 31, "4": 3, "5": 21, "6": 0, "7": 32, "8": 12, "9": 59, "10": 60, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 356}, "Kacang Hijau Kupas": {"weight": "KG", "by_sales": {"S1": 20, "S2": 55, "S3": 51, "S4": 32, "S5": 0}, "daily": {"1": 30, "2": 5, "3": 33, "4": 0, "5": 10, "6": 0, "7": 25, "8": 0, "9": 53, "10": 2, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 158}, "Kacang Tanah": {"weight": "KG", "by_sales": {"S1": 126, "S2": 353, "S3": 56, "S4": 54, "S5": 0}, "daily": {"1": 20, "2": 5, "3": 65, "4": 25, "5": 40, "6": 0, "7": 113, "8": 65, "9": 113, "10": 143, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 589}, "Kacang Tanah Kupas": {"weight": "KG", "by_sales": {"S1": 3, "S2": 13, "S3": 0, "S4": 0, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 3, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 13, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 16}, "Kedelai": {"weight": "KG", "by_sales": {"S1": 0, "S2": 0, "S3": 0, "S4": 0, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 0}, "Kemiri Bulat": {"weight": "KG", "by_sales": {"S1": 18, "S2": 15, "S3": 22, "S4": 64, "S5": 5}, "daily": {"1": 55, "2": 5, "3": 9, "4": 0, "5": 4, "6": 0, "7": 13, "8": 2, "9": 10, "10": 25, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 124}, "Kemiri Pecah": {"weight": "KG", "by_sales": {"S1": 2, "S2": 1, "S3": 8, "S4": 0, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 1, "8": 3, "9": 0, "10": 7, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 11}, "Kerupuk Bawang Bintang": {"weight": "BAL", "by_sales": {"S1": 0, "S2": 0, "S3": 2, "S4": 0, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 1, "6": 0, "7": 0, "8": 0, "9": 0, "10": 1, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 2}, "Kerupuk Bawang Kuning": {"weight": "BAL", "by_sales": {"S1": 1, "S2": 0, "S3": 6, "S4": 0, "S5": 1}, "daily": {"1": 0, "2": 0, "3": 1, "4": 0, "5": 1, "6": 0, "7": 0, "8": 0, "9": 1, "10": 5, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 8}, "Kerupuk Bawang Merah": {"weight": "BAL", "by_sales": {"S1": 1, "S2": 2, "S3": 6, "S4": 0, "S5": 0}, "daily": {"1": 1, "2": 0, "3": 0, "4": 0, "5": 2, "6": 0, "7": 0, "8": 0, "9": 1, "10": 5, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 9}, "Kerupuk Bawang Pelangi": {"weight": "BAL", "by_sales": {"S1": 3, "S2": 3, "S3": 3, "S4": 1, "S5": 2}, "daily": {"1": 2, "2": 0, "3": 4, "4": 2, "5": 2, "6": 0, "7": 0, "8": 0, "9": 1, "10": 1, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 12}, "Kerupuk Mawar Putih": {"weight": "BAL", "by_sales": {"S1": 1, "S2": 0, "S3": 0, "S4": 0, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 1, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 1}, "Ketumbar": {"weight": "KG", "by_sales": {"S1": 0, "S2": 4, "S3": 1, "S4": 26, "S5": 1}, "daily": {"1": 1, "2": 0, "3": 1, "4": 3, "5": 0, "6": 0, "7": 27, "8": 0, "9": 0, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 32}, "Lada Putih": {"weight": "KG", "by_sales": {"S1": 0, "S2": 1, "S3": 1, "S4": 0, "S5": 2}, "daily": {"1": 1, "2": 0, "3": 1, "4": 1, "5": 0, "6": 0, "7": 0, "8": 0, "9": 1, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 4}, "Mie Bakso": {"weight": "BAL", "by_sales": {"S1": 0, "S2": 0, "S3": 1, "S4": 0, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 1, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 1}, "Pop Corn": {"weight": "KG", "by_sales": {"S1": 0, "S2": 52, "S3": 5, "S4": 0, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 22, "4": 0, "5": 0, "6": 0, "7": 0, "8": 5, "9": 22, "10": 8, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 57}, "Tepung Beras": {"weight": "BAL", "by_sales": {"S1": 0, "S2": 0, "S3": 0, "S4": 1, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 1, "8": 0, "9": 0, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 1}, "Tepung Ketan": {"weight": "BAL", "by_sales": {"S1": 0, "S2": 0, "S3": 0, "S4": 0, "S5": 0}, "daily": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 0}, "Tepung Roti": {"weight": "BAL", "by_sales": {"S1": 5, "S2": 2, "S3": 3, "S4": 2, "S5": 6}, "daily": {"1": 2, "2": 0, "3": 4, "4": 0, "5": 2, "6": 0, "7": 1, "8": 1, "9": 1, "10": 1, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 18}, "Wijen": {"weight": "KG", "by_sales": {"S1": 36, "S2": 138, "S3": 1, "S4": 0, "S5": 4}, "daily": {"1": 50, "2": 4, "3": 0, "4": 3, "5": 10, "6": 0, "7": 80, "8": 0, "9": 3, "10": 26, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "total": 179}}, "sales_points": ["S1", "S2", "S3", "S4", "S5"], "sales_totals": {"S1": 264, "S2": 893, "S3": 345, "S4": 253, "S5": 22}, "daily_grand": {"1": 324, "2": 25, "3": 192, "4": 66, "5": 108, "6": 0, "7": 349, "8": 101, "9": 315, "10": 294, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "sales_daily": {"S1": {"1": 18, "2": 8, "3": 8, "4": 2, "5": 10, "6": 0, "7": 31, "8": 0, "9": 103, "10": 75, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "S2": {"1": 208, "2": 10, "3": 127, "4": 28, "5": 49, "6": 0, "7": 104, "8": 60, "9": 110, "10": 160, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "S3": {"1": 0, "2": 0, "3": 13, "4": 25, "5": 25, "6": 0, "7": 86, "8": 33, "9": 94, "10": 47, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "S4": {"1": 91, "2": 0, "3": 32, "4": 8, "5": 17, "6": 0, "7": 100, "8": 2, "9": 0, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}, "S5": {"1": 7, "2": 7, "3": 12, "4": 3, "5": 7, "6": 0, "7": 0, "8": 0, "9": 8, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0, "17": 0, "18": 0, "19": 0, "20": 0, "21": 0, "22": 0, "23": 0, "24": 0, "25": 0, "26": 0, "27": 0, "28": 0, "29": 0, "30": 0, "31": 0}}, "month": "September 2026"};
+
+const colors = ['#38bdf8','#22c55e','#f59e0b','#a78bfa','#ef4444','#14b8a6','#f472b6'];
+const maxTotal = Math.max(...Object.values(DATA.combined).map(x => x.total)) || 1;
+
+// KPI
+const totalAll = Object.values(DATA.sales_totals).reduce((a,b)=>a+b,0);
+const activeItems = Object.values(DATA.combined).filter(x => x.total > 0).length;
+const topItem = Object.entries(DATA.combined).sort((a,b)=>b[1].total-a[1].total)[0];
+document.getElementById('kpi').innerHTML = `
+  <div class="card kpi"><div class="label">Total Volume</div><div class="value accent">${totalAll.toLocaleString('id')}</div><div class="sub">semua item & titik</div></div>
+  <div class="card kpi"><div class="label">Item Aktif</div><div class="value green">${activeItems}</div><div class="sub">dari ${DATA.items.length} item</div></div>
+  <div class="card kpi"><div class="label">Titik Tertinggi</div><div class="value orange">${Object.entries(DATA.sales_totals).sort((a,b)=>b[1]-a[1])[0][0]}</div><div class="sub">${Object.entries(DATA.sales_totals).sort((a,b)=>b[1]-a[1])[0][1].toLocaleString('id')} unit</div></div>
+  <div class="card kpi"><div class="label">Item Terlaris</div><div class="value purple">${topItem[0]}</div><div class="sub">${topItem[1].total.toLocaleString('id')} ${topItem[1].weight}</div></div>
+`;
+
+// Daily chart
+const days = Object.keys(DATA.daily_grand).map(Number).sort((a,b)=>a-b);
+const dailyVals = days.map(d => DATA.daily_grand[String(d)]);
+new Chart(document.getElementById('chartDaily'), {
+  type: 'bar',
+  data: {
+    labels: days.map(d => 'Tgl '+d),
+    datasets: [{
+      label: 'Volume',
+      data: dailyVals,
+      backgroundColor: 'rgba(56,189,248,0.7)',
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#94a3b8', maxRotation: 45 }, grid: { color: '#334155' } },
+      y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' }, beginAtZero: true }
+    }
+  }
+});
+
+// Sales comparison
+new Chart(document.getElementById('chartSales'), {
+  type: 'doughnut',
+  data: {
+    labels: DATA.sales_points,
+    datasets: [{
+      data: DATA.sales_points.map(s => DATA.sales_totals[s]),
+      backgroundColor: colors,
+      borderWidth: 0
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'right', labels: { color: '#e2e8f0' } }
+    }
+  }
+});
+
+// Top items
+const topSorted = Object.entries(DATA.combined).sort((a,b)=>b[1].total-a[1].total).slice(0,12);
+new Chart(document.getElementById('chartTop'), {
+  type: 'bar',
+  data: {
+    labels: topSorted.map(x => x[0]),
+    datasets: [{
+      label: 'Total Volume',
+      data: topSorted.map(x => x[1].total),
+      backgroundColor: topSorted.map((_,i) => colors[i % colors.length]),
+      borderRadius: 4
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' }, beginAtZero: true },
+      y: { ticks: { color: '#e2e8f0', font: { size: 11 } }, grid: { display: false } }
+    }
+  }
+});
+
+// Table
+let sortKey = 'total';
+let sortDir = -1;
+
+function renderTable() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const unit = document.getElementById('filterUnit').value;
+  const sales = document.getElementById('filterSales').value;
+  let rows = Object.entries(DATA.combined).map(([name, d]) => ({
+    name, weight: d.weight, ...d.by_sales, total: d.total
+  }));
+  if (q) rows = rows.filter(r => r.name.toLowerCase().includes(q));
+  if (unit) rows = rows.filter(r => r.weight === unit);
+  rows.sort((a,b) => {
+    const va = a[sortKey] ?? a.name;
+    const vb = b[sortKey] ?? b.name;
+    if (typeof va === 'string') return sortDir * va.localeCompare(vb);
+    return sortDir * (va - vb);
+  });
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = rows.map(r => {
+    const share = maxTotal ? Math.round(r.total / maxTotal * 100) : 0;
+    const badgeClass = r.weight.toLowerCase();
+    return `<tr>
+      <td>${r.name}</td>
+      <td><span class="badge ${badgeClass}">${r.weight}</span></td>
+      <td class="num">${r.S1||0}</td>
+      <td class="num">${r.S2||0}</td>
+      <td class="num">${r.S3||0}</td>
+      <td class="num">${r.S4||0}</td>
+      <td class="num">${r.S5||0}</td>
+      <td class="num"><strong>${r.total}</strong></td>
+      <td><div class="bar-cell"><div class="bar" style="width:${share}%"></div><span style="font-size:0.75rem;color:#94a3b8">${share}%</span></div></td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const k = th.dataset.sort;
+    if (sortKey === k) sortDir *= -1;
+    else { sortKey = k; sortDir = (k === 'name' || k === 'weight') ? 1 : -1; }
+    renderTable();
+  });
+});
+document.getElementById('search').addEventListener('input', renderTable);
+document.getElementById('filterUnit').addEventListener('change', renderTable);
+document.getElementById('filterSales').addEventListener('change', renderTable);
+renderTable();
+
+// Item daily chart
+const itemSelect = document.getElementById('itemSelect');
+Object.entries(DATA.combined)
+  .sort((a,b) => b[1].total - a[1].total)
+  .forEach(([name]) => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name + (DATA.combined[name].total ? ` (${DATA.combined[name].total})` : '');
+    itemSelect.appendChild(opt);
+  });
+
+let itemChart = null;
+function updateItemChart() {
+  const name = itemSelect.value;
+  const d = DATA.combined[name];
+  const vals = days.map(day => d.daily[String(day)]);
+  if (itemChart) itemChart.destroy();
+  itemChart = new Chart(document.getElementById('chartItemDaily'), {
+    type: 'line',
+    data: {
+      labels: days.map(d => 'Tgl '+d),
+      datasets: [{
+        label: name,
+        data: vals,
+        borderColor: '#38bdf8',
+        backgroundColor: 'rgba(56,189,248,0.15)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#94a3b8', maxRotation: 45 }, grid: { color: '#334155' } },
+        y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' }, beginAtZero: true }
+      }
+    }
+  });
+}
+itemSelect.addEventListener('change', updateItemChart);
+updateItemChart();
+</script>
+</body>
+</html>
